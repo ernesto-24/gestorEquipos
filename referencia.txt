@@ -1,0 +1,152 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam nodesep 40
+skinparam ranksep 60
+hide empty members
+
+interface ConectorUI <<interfaz Kotlin>>
+
+package "M1 · Proyectos y ciclos" {
+  class Proyecto {
+    + nombre: String
+    + creador: Usuario
+    + miembros: List<Usuario>
+    + plantilla: PlantillaPesos?
+    + recompensas: SistemaRecompensas?
+    + ciclos: List<Ciclo>
+    + agregarMiembro(u: Usuario)
+    + abrirCiclo(meta: String, inicio: LocalDate, fin: LocalDate, coordinador: Usuario): Ciclo
+    + entregar(t: Tarea, e: Entrega)
+    + revisar(e: Entrega, revisor: Usuario, aprobada: Boolean)
+    + cerrarCiclo(c: Ciclo)
+    + generarInforme(): List<InformeContribucion>
+  }
+  class Ciclo {
+    + meta: String
+    + inicio: LocalDate
+    + fin: LocalDate
+    + coordinador: Usuario
+    + tareas: List<Tarea>
+    + cerrado: Boolean
+    + crearTarea(titulo: String, fechaLimite: LocalDate): Tarea
+    + metaCumplida(): Boolean
+    + lineaTiempo(): List<Entrega>
+  }
+}
+
+package "M2 · Tareas y entregas" {
+  class Tarea {
+    + titulo: String
+    + fechaLimite: LocalDate
+    + responsable: Usuario?
+    + peso: NivelPeso?
+    + votacion: Votacion?
+    + entregas: List<Entrega>
+    + asignar(u: Usuario)
+    + estado(): EstadoTarea
+    + fueATiempo(): Boolean
+  }
+  enum EstadoTarea {
+    PENDIENTE
+    EN_PROGRESO
+    EN_REVISION
+    HECHA
+  }
+  class Entrega {
+    + autor: Usuario
+    + mensaje: String
+    + fecha: LocalDateTime
+    + adjuntos: List<Adjunto>
+    + revisor: Usuario?
+    + aprobada: Boolean?
+  }
+  class Adjunto <<data>> {
+    + tipo: TipoAdjunto
+    + contenido: String
+  }
+  enum TipoAdjunto {
+    PDF
+    ENLACE
+    NOTA
+  }
+}
+
+package "M3 · Estimación y recompensas" {
+  class PlantillaPesos {
+    + nombre: String
+    + niveles: List<NivelPeso>
+  }
+  class NivelPeso <<data>> {
+    + etiqueta: String
+    + valor: Int
+  }
+  class Votacion {
+    - votos: Map<Usuario, NivelPeso>
+    + votar(u: Usuario, n: NivelPeso)
+    + resultado(): NivelPeso
+  }
+  class SistemaRecompensas {
+    - puntos: Map<Usuario, Int>
+    - rachas: Map<Usuario, Int>
+    + sumarPuntos(u: Usuario, cantidad: Int)
+    + puntosDe(u: Usuario): Int
+    + actualizarRacha(u: Usuario, aTiempo: Boolean)
+    + rachaDe(u: Usuario): Int
+  }
+  class InformeContribucion <<data>> {
+    + usuario: Usuario
+    + tareasHechas: Int
+    + porcentajeATiempo: Double
+    + puntos: Int?
+  }
+}
+
+package "M4 · Usuarios, sesión y monetización" {
+  class Usuario {
+    + id: String
+    + nombre: String
+    + correo: String
+    + plan: TipoPlan
+    + crearProyecto(nombre: String): Proyecto
+  }
+  class Sesion {
+    + usuarioActual: Usuario?
+    + registrarse(nombre: String, correo: String, contrasena: String): Usuario
+    + iniciarSesion(correo: String, contrasena: String): Usuario?
+    + cerrarSesion()
+  }
+  enum TipoPlan {
+    GRATIS
+    PREMIUM
+    --
+    + maxProyectos: Int
+    + conAnuncios: Boolean
+  }
+  class GestorMonetizacion {
+    + puedeCrearProyecto(u: Usuario): Boolean
+    + debeMostrarAnuncio(u: Usuario): Boolean
+    + mejorarAPremium(u: Usuario)
+  }
+}
+
+ConectorUI ..> Sesion
+ConectorUI ..> Proyecto
+ConectorUI ..> GestorMonetizacion
+Sesion --> "0..1" Usuario : usuarioActual
+Usuario ..> Proyecto : crea
+Usuario ..> GestorMonetizacion
+
+Proyecto "1" *-- "*" Ciclo
+Proyecto o-- "1..*" Usuario : miembros
+Proyecto "1" *-- "0..1" PlantillaPesos
+Proyecto "1" *-- "0..1" SistemaRecompensas
+
+Ciclo "1" *-- "*" Tarea
+Tarea "1" *-- "*" Entrega
+Tarea "1" *-- "0..1" Votacion
+Tarea --> "0..1" NivelPeso : peso
+Entrega "1" *-- "1..*" Adjunto
+
+PlantillaPesos "1" *-- "1..*" NivelPeso
+@enduml
+
